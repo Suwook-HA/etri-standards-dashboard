@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import useStore from '../../store/useStore'
 import VersionHistory from './VersionHistory'
+import { triggerHtmlDownload } from '../../utils/exportHtml'
 
 export default function Header() {
-  const { dataDate, setAppState, globalSearch, setGlobalSearch } = useStore()
+  const { dataDate, setAppState, globalSearch, setGlobalSearch, getFilteredRecords } = useStore()
   const [showHistory, setShowHistory] = useState(false)
 
   return (
@@ -51,6 +52,16 @@ export default function Header() {
           {dataDate && (
             <span className="text-xs text-gray-400 whitespace-nowrap">데이터 기준: {dataDate}</span>
           )}
+          <button
+            onClick={() => triggerHtmlDownload(getFilteredRecords(), dataDate)}
+            className="text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            HTML 내보내기
+          </button>
           <button
             onClick={() => setShowHistory(true)}
             className="text-xs px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 flex items-center gap-1.5 whitespace-nowrap"

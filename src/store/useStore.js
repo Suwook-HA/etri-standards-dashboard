@@ -1,113 +1,76 @@
 import { create } from 'zustand'
+import { useDataStore } from './dataStore'
+import { useFilterStore } from './filterStore'
+import { usePanelStore } from './panelStore'
 
 const useStore = create((set, get) => ({
   // ── App state ──────────────────────────────────────────
-  /** 'loading' | 'upload' | 'validating' | 'diffing' | 'dashboard' */
   appState: 'loading',
-  setAppState: (appState) => set({ appState }),
+  setAppState: (appState) => {
+    set({ appState })
+    useDataStore.setState({ appState })
+  },
 
   // ── Active data ────────────────────────────────────────
-  /** Full records array (active version) */
   records: [],
-  setRecords: (records) => set({ records }),
-
-  /** Current data reference date string e.g. "2025-07" */
+  setRecords: (records) => {
+    set({ records })
+    useDataStore.setState({ records })
+  },
   dataDate: null,
   setDataDate: (dataDate) => set({ dataDate }),
-
-  /** Active version number */
   activeVersion: null,
-  setActiveVersion: (activeVersion) => set({ activeVersion }),
+  setActiveVersion: (activeVersion) => {
+    set({ activeVersion })
+    useDataStore.setState({ activeVersion })
+  },
 
   // ── Upload flow state ──────────────────────────────────
-  /** Parsed records from the new file being uploaded */
   pendingRecords: null,
   setPendingRecords: (pendingRecords) => set({ pendingRecords }),
-
-  /** Raw headers from new file */
   pendingHeaders: [],
   setPendingHeaders: (pendingHeaders) => set({ pendingHeaders }),
-
-  /** Validation result: { errors, warnings, passed } */
   validationResult: null,
   setValidationResult: (validationResult) => set({ validationResult }),
-
-  /** Diff result: { new[], modified[], removed[], unchanged[] } */
   diffResult: null,
   setDiffResult: (diffResult) => set({ diffResult }),
-
-  /** Upload memo text */
   uploadMemo: '',
   setUploadMemo: (uploadMemo) => set({ uploadMemo }),
-
-  /** Filename being uploaded */
   uploadFileName: '',
   setUploadFileName: (uploadFileName) => set({ uploadFileName }),
 
-  // ── Global filters ─────────────────────────────────────
+  // ── Filters: delegate writes to filterStore ────────────
   filters: {
-    techArea: [],        // string[]
-    stdBody: [],         // string[]
-    institute: '',       // single string
-    status: [],          // string[]
-    endYearRange: [2002, 2030],
-    fundingAgency: [],
+    techArea: [], stdBody: [], institute: '', status: [],
+    endYearRange: [2002, 2030], fundingAgency: [],
     showRecentChanges: false,
   },
-  setFilter: (key, value) =>
-    set(state => ({ filters: { ...state.filters, [key]: value } })),
-  resetFilters: () =>
-    set({
-      filters: {
-        techArea: [], stdBody: [], institute: '', status: [],
-        endYearRange: [2002, 2030], fundingAgency: [],
-        showRecentChanges: false,
-      },
-    }),
+  globalSearch: '',
+  setFilter: (key, value) => useFilterStore.getState().setFilter(key, value),
+  resetFilters: () => useFilterStore.getState().resetFilters(),
+  setGlobalSearch: (q) => useFilterStore.getState().setGlobalSearch(q),
 
-  // ── Side panel ─────────────────────────────────────────
-  /** null | { type: 'list', context, records } | { type: 'detail', record } */
+  // ── Side panel: delegate to panelStore ─────────────────
   sidePanel: null,
   panelHistory: [],
-
-  openListPanel: (context, records) =>
-    set(state => ({
-      panelHistory: state.sidePanel ? [...state.panelHistory, state.sidePanel] : [],
-      sidePanel: { type: 'list', context, records },
-    })),
-
-  openDetailPanel: (record) =>
-    set(state => ({
-      panelHistory: state.sidePanel ? [...state.panelHistory, state.sidePanel] : [],
-      sidePanel: { type: 'detail', record },
-    })),
-
-  goBackPanel: () =>
-    set(state => {
-      if (state.panelHistory.length === 0) return { sidePanel: null, panelHistory: [] }
-      const history = [...state.panelHistory]
-      const prev = history.pop()
-      return { sidePanel: prev, panelHistory: history }
-    }),
-
-  closePanel: () => set({ sidePanel: null, panelHistory: [] }),
+  openListPanel: (context, records) => {
+    const ctx = typeof context === 'string' ? { label: context } : context
+    usePanelStore.getState().openList(ctx, records ?? [])
+  },
+  openDetailPanel: (record) => usePanelStore.getState().openDetail(record),
+  goBackPanel: () => usePanelStore.getState().goBack(),
+  closePanel: () => usePanelStore.getState().close(),
 
   // ── Active nav tab ─────────────────────────────────────
-  /** 'home' | 'tech' | 'body' | 'dept' | 'year' | 'patent' */
   activeTab: 'home',
   setActiveTab: (activeTab) => set({ activeTab }),
-
-  // ── Global search ──────────────────────────────────────
-  globalSearch: '',
-  setGlobalSearch: (globalSearch) => set({ globalSearch }),
-
-  // ── Version history modal ──────────────────────────────
   showVersionHistory: false,
   setShowVersionHistory: (v) => set({ showVersionHistory: v }),
 
   // ── Derived: filtered records ──────────────────────────
   getFilteredRecords: () => {
-    const { records, filters, globalSearch } = get()
+    const { records } = get()
+    const { filters, globalSearch } = useFilterStore.getState()
     const q = globalSearch.trim().toLowerCase()
     return records.filter(r => {
       if (q) {
@@ -131,5 +94,15 @@ const useStore = create((set, get) => ({
     })
   },
 }))
+
+// ── Sync filterStore → useStore (reactivity for existing components) ──
+useFilterStore.subscribe((state) => {
+  useStore.setState({ filters: state.filters, globalSearch: state.globalSearch })
+})
+
+// ── Sync panelStore → useStore (for components that read sidePanel) ──
+usePanelStore.subscribe((state) => {
+  useStore.setState({ sidePanel: state.panel, panelHistory: state.history })
+})
 
 export default useStore

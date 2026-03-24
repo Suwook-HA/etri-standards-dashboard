@@ -2,8 +2,8 @@ import useStore from '../../store/useStore'
 import Header from './Header'
 import NavBar from './NavBar'
 import FilterBar from './FilterBar'
-import SidePanel from './SidePanel'
-import HomeView from '../dashboard/HomeView'
+import SidePanel from '../SidePanel'
+import HomeView from '../../views/Home'
 import TechAreaView from '../dashboard/TechAreaView'
 import StdBodyView from '../dashboard/StdBodyView'
 import DeptView from '../dashboard/DeptView'
@@ -12,9 +12,8 @@ import PatentView from '../dashboard/PatentView'
 import { useUrlSync } from '../../hooks/useUrlSync'
 
 export default function DashboardLayout() {
-  const { sidePanel, activeTab } = useStore()
+  const { activeTab } = useStore()
   useUrlSync()
-  const panelOpen = sidePanel !== null
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -24,7 +23,7 @@ export default function DashboardLayout() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main content */}
-        <main className={`flex-1 overflow-y-auto p-5 transition-all duration-300 min-w-0`}>
+        <main className="flex-1 overflow-y-auto p-5 transition-all duration-300 min-w-0">
           {activeTab === 'home'   && <HomeView />}
           {activeTab === 'tech'   && <TechAreaView />}
           {activeTab === 'body'   && <StdBodyView />}
@@ -32,14 +31,10 @@ export default function DashboardLayout() {
           {activeTab === 'year'   && <YearView />}
           {activeTab === 'patent' && <PatentView />}
         </main>
-
-        {/* Side panel */}
-        {panelOpen && (
-          <aside className="w-[480px] shrink-0 border-l border-gray-200 bg-white overflow-y-auto">
-            <SidePanel />
-          </aside>
-        )}
       </div>
+
+      {/* Fixed slide-in side panel */}
+      <SidePanel />
     </div>
   )
 }
